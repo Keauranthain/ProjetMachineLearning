@@ -4,11 +4,28 @@ import os
 import configparser
 import torch
 from faster_whisper import WhisperModel
+from jiwer import wer
+
+def calculate_precision(wts_file, verification_file):
+    with open(wts_file, "r", encoding="utf-8") as wts:
+        transcribed_text = wts.read()
+
+    with open(verification_file, "r", encoding="utf-8") as vf:
+        reference_text = vf.read()
+
+    # Calculate WER, ignore punctuation and structure
+    print(reference_text)
+    print(transcribed_text)
+    error_rate = wer(reference_text, transcribed_text)
+    result = (1 - error_rate)*100
+    print(f'error_rate: {error_rate}, ratio : {result}')
+    return result
 
 def transcribe_to_lrc(
         audio_file: str,
         lrc_file: str,
         wts_file: str,
+        verification_file: str,
         model_size: str,
         beam_size: int,
         best_of: int,
@@ -90,7 +107,15 @@ def transcribe_to_lrc(
 
     print(f"{stamp()} Fichier WTS généré : {wts_file}")
 
+    # Calculate precision if verification file exists
+    if os.path.isfile(verification_file):
+        precision = calculate_precision(wts_file, verification_file)
+        print(f"{stamp()} Précision calculée : {precision:.2f}%")
+    else:
+        print(f"{stamp()} Fichier de vérification non trouvé : {verification_file}")
+
 if __name__ == "__main__":
+    print(wer("a c d e","a b c d e"))
     config = configparser.ConfigParser()
     config.read("settings.ini")
 
@@ -98,6 +123,7 @@ if __name__ == "__main__":
     music_folder = config.get("Paths", "music_folder")
     result_folder = config.get("Paths", "result_folder")
     wts_folder = config.get("Paths", "wts_folder", fallback="Results_WTS")
+    verification_folder = config.get("Paths", "verification_folder", fallback="Verification")
 
     if song_name.lower() == "all":
         for file in os.listdir(music_folder):
@@ -106,11 +132,13 @@ if __name__ == "__main__":
                 audio_file = os.path.join(music_folder, file)
                 lrc_file = os.path.join(result_folder, f"{song_name}.lrc")
                 wts_file = os.path.join(wts_folder, f"{song_name}.txt")
+                verification_file = os.path.join(verification_folder, f"{song_name}.lrc")
 
                 transcribe_to_lrc(
                     audio_file=audio_file,
                     lrc_file=lrc_file,
                     wts_file=wts_file,
+                    verification_file=verification_file,
                     model_size=config.get("Whisper", "model_size"),
                     beam_size=config.getint("Whisper", "beam_size"),
                     best_of=config.getint("Whisper", "best_of"),
@@ -124,11 +152,13 @@ if __name__ == "__main__":
         audio_file = os.path.join(music_folder, f"{song_name}.mp3")
         lrc_file = os.path.join(result_folder, f"{song_name}.lrc")
         wts_file = os.path.join(wts_folder, f"{song_name}.txt")
+        verification_file = os.path.join(verification_folder, f"{song_name}.lrc")
 
         transcribe_to_lrc(
             audio_file=audio_file,
             lrc_file=lrc_file,
             wts_file=wts_file,
+            verification_file=verification_file,
             model_size=config.get("Whisper", "model_size"),
             beam_size=config.getint("Whisper", "beam_size"),
             best_of=config.getint("Whisper", "best_of"),
