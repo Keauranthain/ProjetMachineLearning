@@ -14,12 +14,8 @@ def calculate_precision(wts_file, verification_file):
         reference_text = vf.read()
 
     # Calculate WER, ignore punctuation and structure
-    print(reference_text)
-    print(transcribed_text)
     error_rate = wer(reference_text, transcribed_text)
-    result = (1 - error_rate)*100
-    print(f'error_rate: {error_rate}, ratio : {result}')
-    return result
+    return error_rate
 
 def transcribe_to_lrc(
         audio_file: str,
@@ -110,12 +106,11 @@ def transcribe_to_lrc(
     # Calculate precision if verification file exists
     if os.path.isfile(verification_file):
         precision = calculate_precision(wts_file, verification_file)
-        print(f"{stamp()} Précision calculée : {precision:.2f}%")
+        print(f"{stamp()} WER : {precision}")
     else:
         print(f"{stamp()} Fichier de vérification non trouvé : {verification_file}")
 
 if __name__ == "__main__":
-    print(wer("a c d e","a b c d e"))
     config = configparser.ConfigParser()
     config.read("settings.ini")
 
